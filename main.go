@@ -344,7 +344,6 @@ func main() {
 			consecutiveFailures := 0
 			err := dbManager.Ping()
 			connectionInfo.SetLastPingTime()
-			connectionInfo.SetReconnectTime()
 			if err != nil {
 				consecutiveFailures++
 				connectionInfo.SetStatus(Disconnected)
@@ -354,6 +353,7 @@ func main() {
 					connectionInfo.SetStatus(Reconnecting)
 
 					for attempt := range maxRetries {
+						connectionInfo.SetReconnectTime()
 						fmt.Printf("Auto-reconnection attempt %d/%d...\n", attempt+1, maxRetries)
 
 						err := dbManager.Connect()
