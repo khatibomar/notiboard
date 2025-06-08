@@ -9,6 +9,43 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+var (
+	WindowWidth  int32 = DefaultWindowWidth
+	WindowHeight int32 = DefaultWindowHeight
+)
+
+// initializeWindow sets up the window with the given configuration
+func initializeWindow(config ScreenConfig, title string) {
+	if config.Fullscreen {
+		// Get desktop resolution for fullscreen
+		monitor := rl.GetCurrentMonitor()
+		WindowWidth = int32(rl.GetMonitorWidth(monitor))
+		WindowHeight = int32(rl.GetMonitorHeight(monitor))
+		rl.InitWindow(WindowWidth, WindowHeight, title)
+		rl.ToggleFullscreen()
+	} else {
+		WindowWidth = config.Width
+		WindowHeight = config.Height
+		rl.InitWindow(WindowWidth, WindowHeight, title)
+	}
+
+	if config.Resizable {
+		rl.SetWindowState(rl.FlagWindowResizable)
+	}
+}
+
+// updateWindowDimensions updates the global window dimensions
+func updateWindowDimensions() {
+	WindowWidth = int32(rl.GetScreenWidth())
+	WindowHeight = int32(rl.GetScreenHeight())
+}
+
+// getIndicatorPosition returns the position for the connection indicator
+func getIndicatorPosition() (float32, float32) {
+	margin := float32(100)
+	return float32(WindowWidth) - margin, 50
+}
+
 // drawConnectionIndicator draws an animated connection status indicator
 func drawConnectionIndicator(x, y float32, info *ConnectionInfo, animTime float64, isHovered bool) {
 	status := info.GetStatus()
@@ -166,8 +203,8 @@ func drawDetailWindow(info *ConnectionInfo, mousePos rl.Vector2) (bool, bool) {
 
 	windowWidth := int32(500)
 	windowHeight := int32(300)
-	windowX := (1920 - windowWidth) / 2
-	windowY := (1080 - windowHeight) / 2
+	windowX := (WindowWidth - windowWidth) / 2
+	windowY := (WindowHeight - windowHeight) / 2
 
 	rl.DrawRectangle(windowX, windowY, windowWidth, windowHeight, rl.Color{R: 40, G: 40, B: 40, A: 250})
 	rl.DrawRectangleLines(windowX, windowY, windowWidth, windowHeight, rl.Color{R: 100, G: 100, B: 100, A: 255})
@@ -320,8 +357,14 @@ func main() {
 
 	windowTitle := "notify board"
 
-	rl.InitWindow(1920, 1080, windowTitle)
+	// Parse screen configuration from command line arguments and environment variables
+	screenConfig := HD
+
+	initializeWindow(screenConfig, windowTitle)
 	defer rl.CloseWindow()
+
+	// Update window dimensions in case they changed during initialization
+	updateWindowDimensions()
 
 	targetFPS := int32(60)
 	rl.SetTargetFPS(targetFPS)
@@ -407,11 +450,15 @@ func main() {
 	}()
 
 	for !rl.WindowShouldClose() {
+		// Update dimensions if window was resized
+		if rl.IsWindowResized() {
+			updateWindowDimensions()
+		}
+
 		animationTime += float64(rl.GetFrameTime())
 
 		mousePos := rl.GetMousePosition()
-		indicatorX := float32(1820)
-		indicatorY := float32(50)
+		indicatorX, indicatorY := getIndicatorPosition()
 
 		isHovered := isPointInCircle(mousePos.X, mousePos.Y, indicatorX, indicatorY, 30)
 
@@ -430,8 +477,8 @@ func main() {
 
 				windowWidth := int32(500)
 				windowHeight := int32(300)
-				windowX := (1920 - windowWidth) / 2
-				windowY := (1080 - windowHeight) / 2
+				windowX := (WindowWidth - windowWidth) / 2
+				windowY := (WindowHeight - windowHeight) / 2
 
 				if !shouldClose && !shouldReconnect && !isPointInRect(mousePos.X, mousePos.Y, windowX, windowY, windowWidth, windowHeight) {
 					showDetailWindow = false
