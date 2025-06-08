@@ -335,7 +335,7 @@ func main() {
 
 	// Connection monitoring and auto-reconnection goroutine
 	go func() {
-		ticker := time.NewTicker(2 * time.Second)
+		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 
 		maxRetries := 3
@@ -349,11 +349,9 @@ func main() {
 				consecutiveFailures++
 				connectionInfo.SetStatus(Disconnected)
 				connectionInfo.SetLastError(err)
-				time.Sleep(time.Second)
 
 				if consecutiveFailures < maxRetries {
 					connectionInfo.SetStatus(Reconnecting)
-					connectionInfo.SetLastError(err)
 
 					for attempt := range maxRetries {
 						fmt.Printf("Auto-reconnection attempt %d/%d...\n", attempt+1, maxRetries)
@@ -365,7 +363,8 @@ func main() {
 								fmt.Println("Auto-reconnection successful!")
 								connectionInfo.SetStatus(Connected)
 								connectionInfo.SetLastError(nil)
-								break
+								connectionInfo.SetAllReconnectTriesFailed(false)
+								return
 							}
 							err = pingErr
 						}
